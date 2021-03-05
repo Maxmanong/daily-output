@@ -138,6 +138,15 @@
         // 2、Dep是data每个对象包括子对象都拥有一个该对象, 当所绑定的数据有变更时, 通过dep.notify()通知Watcher。
         // 3、Compile是HTML指令解析器，对每个元素节点的指令进行扫描和解析，根据指令模板替换数据，以及绑定相应的更新函数。
         // 4、Watcher是连接Observer和Compile的桥梁，Compile解析指令时会创建一个对应的Watcher并绑定update方法 , 添加到Dep对象上。
+
+
+        // 理解
+        // 1、编译html模板时，发现需要特殊处理的变量，比如v-model=“name”，这个name被发现以后，就准备为其创建watcher，
+        // 2、在创建watcher的时候，先把这个watcher挂载到Dep.target这个全局静态变量上，然后触发一次get事件，
+        // 这样就触发了get函数中的Dep.target && dep.addSub(Dep.target);，
+        // 3、等get到了变量以后，也已经添加到subs队列里了，这时候在令Dep.target = null。
+        // 4、在变量改变，触发set函数时，要调用watcher.update()函数，这里也要触发一次get函数。因此可能会重复往subs队列添加watcher，
+        // 因此还要设置一个可以自增的depid来进行唯一性控制。
     </script>
 </body>
 </html>
