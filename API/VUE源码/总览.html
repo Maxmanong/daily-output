@@ -16,7 +16,17 @@
                 message: '我是VUE爆肝源码系列！'
             }
         })
-        
+        const v = new Vue({
+            data: {
+                a: 1,
+                b: 2
+            }
+        })
+        console.log(v)
+        v.$watch("a", () => console.log("哈哈， 打印出来了！"))
+        setTimeout(() => {
+            v.a = 5
+        }, 2000);
     </script>
 </body>
 </html>

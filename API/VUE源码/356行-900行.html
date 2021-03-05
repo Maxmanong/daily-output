@@ -7,6 +7,120 @@
     <title>VUE源码之356行-900行</title>
 </head>
 <body>
-    
+    <script>
+        // 实现Observer
+        // 思路：利用Object.defineProperty的特性，利用它的set和get。
+        // 将要observe的对象，通过递归，将它所有的属性，包括子属性的属性，
+        // 都给加上set和get。这样的话，给这个对象的某个属性赋值，就会触发set。
+        class Observer {
+            constructor(value) {
+                this.value = value
+            }
+            // 递归，让每个子属性可以Observer
+            walk(value) {
+                Object.keys(value).forEach(key => this.convert(key, value[key]))
+            }
+            convert(key, val) {
+                defineReactive(this.value, key, val)
+            }
+        }
+        function defineReactive(obj, key, val) {
+            let dep = new Dep()
+            let childOb = observe(val)
+            Object.defineProperty(obj, key, {
+                enumerable: true,
+                configurable: true,
+                get: () => {
+                    if(Dep.target) {
+                        dep.addSub(Dep.target)
+                    }
+                    return val
+                },
+                set: newVal => {
+                    // 如果新赋值的值是个复杂类型，再递归它，加上set和get
+                    let value = val
+                    if(newVal === value) return
+                    // 值一旦有变动，就调用dep依赖收集的notify方法通知
+                    val = newVal
+                    dep.notify()
+                    childOb = observe(newVal)
+                    
+                }
+            })
+        }
+        function observe(value, vm) {
+            if(!value || typeof value !== 'object') {
+                return
+            }
+            return new Observer(value)
+        }
+
+        // 发布订阅者模式
+        // 维护一个数组，，这个数组，就放订阅着，一旦触发notify，订阅者就调用自己的update方法
+        class Dep {
+            constructor() {
+                this.subs = []
+            }
+            addSub(sub) {
+                this.subs.push(sub)
+            }
+            notify() {
+                this.subs.forEach(sub => sub.update())
+            }
+        }
+
+        // 订阅者 
+        class Watcher {
+            constructor(vm, expOrFn, cb) {
+                this.cb = cb
+                this.vm = vm
+                // 此处简化，要区分function还是expression，只考虑最简单的expression
+                this.expOrFn = expOrFn
+                this.value = this.get()
+            }
+            update() {
+                this.run()
+            }
+            run() {
+                const value = this.get()
+                if(value !== this.value) {
+                    this.value = value
+                    this.cb.call(this, vm)
+                }
+            }
+            get() {
+                Dep.target = this
+                // 此处简化，要区分function还是expression
+                const value = this.vm._date[this.expOrFn]
+                Dep.target = null
+                return value 
+            }
+        }
+
+        class Vue {
+            constructor(options = {}) {
+                this.$options = options
+                let data = this._data = this.$options.data
+                Object.keys(data).forEach(key => this._proxy(key))
+                observe(data, this)
+            }
+            $watch(expOrFn, cb, options) {
+                new Watcher(this, expOrFn, cb)
+            }
+            _proxy(key) {
+                let self = this
+                Object.defineProperty(self, key, {
+                    configurable: true,
+                    enumerable: true,
+                    get: function proxyGetter() {
+                        return self._data[key]
+                    },
+                    set: function proxySetter (val) {
+                        self._data[key] = val
+                    }
+                })
+            }
+        }
+    </script>
 </body>
 </html>
