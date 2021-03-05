@@ -43,8 +43,8 @@
                     // 值一旦有变动，就调用dep依赖收集的notify方法通知
                     val = newVal
                     dep.notify()
+                    // 如果子层级也是对象类型，则递归
                     childOb = observe(newVal)
-                    
                 }
             })
         }
@@ -56,7 +56,7 @@
         }
 
         // 发布订阅者模式
-        // 维护一个数组，，这个数组，就放订阅着，一旦触发notify，订阅者就调用自己的update方法
+        // 维护一个数组，，这个数组，就放订阅者，一旦触发notify，订阅者就调用自己的update方法
         class Dep {
             constructor() {
                 this.subs = []
@@ -115,12 +115,29 @@
                     get: function proxyGetter() {
                         return self._data[key]
                     },
-                    set: function proxySetter (val) {
+                    set: function proxySetter(val) {
                         self._data[key] = val
                     }
                 })
             }
         }
+
+
+        // Vue实例化一个对象的流程
+        // 1、新创建一个实例后，Vue调用compile将el转换成vnode。
+        // 2、调用initState, 创建props, data的钩子以及其对象成员的Observer（添加getter和setter）。
+        // 3、执行mount挂载操作，在挂载时建立一个直接对应render的Watcher，并且编译模板生成render函数，执行vm._update来更新DOM。
+        // 4、每当有数据改变，都将通知相应的Watcher执行回调函数，更新视图。
+
+        //      ①、当给这个对象的某个属性赋值时，就会触发set方法。
+        //      ②、set函数调用，触发Dep的notify()向对应的Watcher通知变化。
+        //      ③、Watcher调用update方法。
+        // 在这个过程中：
+
+        // 1、Observer是用来给数据添加Dep依赖。
+        // 2、Dep是data每个对象包括子对象都拥有一个该对象, 当所绑定的数据有变更时, 通过dep.notify()通知Watcher。
+        // 3、Compile是HTML指令解析器，对每个元素节点的指令进行扫描和解析，根据指令模板替换数据，以及绑定相应的更新函数。
+        // 4、Watcher是连接Observer和Compile的桥梁，Compile解析指令时会创建一个对应的Watcher并绑定update方法 , 添加到Dep对象上。
     </script>
 </body>
 </html>
