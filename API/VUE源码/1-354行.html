@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>VUE源码之1-354行</title>
+</head>
+<body>
+    <script>
+        // 高级函数 cached函数，输入参数为函数，返回值为函数。同时使用了闭包，
+        // 其会将该传入的函数的运行结果缓存，创建一个cache对象用于缓存运行fn的运行结果。
+        function cached (fn) {
+        //es6语法，创建一个空对象
+            var cache = Object.create(null);
+            return (function cachedFn (str) {
+                var hit = cache[str];
+                // 加的代码，打印cache，观察变化
+                console.log(cache)
+                // 如果hit有值就返回hit,没有返回fn的返回值，并且将该值赋给cache对象
+                return hit || (cache[str] = fn(str))
+            })
+        }
+        //一个返回自身输入的函数
+        var fn = (val) => {
+            return val;
+        }
+        //这边其实是返回的一个function
+        var rsFn = cached(fn);
+
+        console.log('rsFn(1): ', rsFn(1))
+        console.log('rsFn(2): ', rsFn(2))
+        // 当你再次调用时，{1:1}其实已经被缓存下来了，用了闭包，所以cache对象会一直存在于内存中
+        // 这时候取1,就会直接去取出cache对象中的值，而不会再次调用方法。
+        console.log('rsFn(1)111: ', rsFn(1))
+
+
+
+        function isObject(val) {
+            // return Object.prototype.toString.call(val) === '[object Object]'
+            return (val instanceof Object)
+        }
+        // looseEqual※高级函数 对对象的浅相等进行判断
+        function looseEqual(a, b) {
+            if(a === b) return true
+            const isObjectA = isObject(a)
+            const isObjectB = isObject(b)
+            console.log('isObjectA: ', isObjectA)
+            console.log('isObjectB: ', isObjectB)
+            if(isObjectA && isObjectB) {
+                try {
+                    const isArrayA = Array.isArray(a)
+                    const isArrayB = Array.isArray(b)
+                    if(isArrayA && isArrayB) {
+                        return a.length === b.length && a.every((item, i) => {
+                            return looseEqual(item, b[i])
+                        })
+                    } else if(!isArrayA && !isArrayB) {
+                        const keysA = Object.keys(a)
+                        const keysB = Object.keys(b)
+                        return keysA.length === keysB.length && keysA.every(function(key) {
+                            return looseEqual(a[key], b[key])
+                        })
+                    }else {
+                        return false
+                    }
+                } catch(e) {
+                    return false
+                }
+            } else if(!isObjectA && !isObjectB) {
+                return String(a) === String(b)
+            } else {
+                return false
+            }
+        }
+        let obj1 = [{name: '111'}]
+        let obj2 = [{name: '111'}]
+        console.log('looseEqual: ', looseEqual(obj1, obj2))
+
+
+        // 每次加元素 计算数组长度
+        function polyfillBind(fn, ctx) {
+            function boundFn(a) {
+                var i = arguments.length;
+                // 打印ctx 进行观察
+                console.log('ctx:', ctx)
+                return i ? (i > 1 ? fn.apply(ctx, arguments) : fn.call(ctx, a)) : fn.call(ctx)
+            }
+            boundFn._length = fn.length
+            console.log('boundFn: ', boundFn)
+            return boundFn
+        }
+        var rsFn = polyfillBind(Array.prototype.push,[])//传入一个初始数组对象
+
+        rsFn(1) //[] // 1 因为数组打印在前，所以值都会滞后一步
+
+        rsFn(2) //[1] //2
+
+        rsFn([1,2]) //添一个数组//[1, 2]
+
+        rsFn() // [1, 2, Array(2)]
+
+        rsFn() // [1, 2, Array(2)]
+    </script>
+</body>
+</html>

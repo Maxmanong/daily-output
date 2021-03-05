@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>防抖与节流</title>
+</head>
+<body>
+    <div>
+        <h2>防抖</h2>
+        <div>
+            <label>测试：</label>
+            <input type="text" id="input" />
+        </div>
+    </div>
+    <script>
+        /**
+         * 防抖的作用：把频繁触发的动作放在最后执行一次。
+         * 常见的行为就是搜索引擎的搜索输入(百度是每次都触发，没有使用防抖)，
+         * 只在用户完成输入后进行匹配搜索。
+
+         * 实现思路：设置一个延迟的定时器，每次触发时，
+         * 都取消之前的定时器并重新设置，达到最后执行一次的效果。
+        */
+        function debounce(fn, delay=500, immediate) {
+            let timer = null;
+            let immediateTimer = null;
+
+            return function() {
+                let args = arguments;
+                let context = this
+
+                // 第一次触发
+                if(immediate && !immediateTimer) {
+                    fn.apply(context, args)
+                    // 重置首次触发标识，不然下个周期执行会手干扰
+                    immediateTimer = setTimeout(() => {
+                        immediateTimer = null
+                    }, delay);
+                }
+
+                // 存在多次执行时，重置动作需要放在 timer 中执行
+                if(immediateTimer) clearTimeout(immediateTimer)
+                if(timer) clearTimeout(timer)
+
+                timer = setTimeout(() => {
+                    fn.apply(context. args)
+                    timer = null;
+                    immediateTimer = null;
+                }, delay);
+            }
+        }
+
+        // 使用防抖函数
+    </script>
+</body>
+</html>
