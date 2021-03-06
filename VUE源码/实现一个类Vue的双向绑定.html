@@ -1,0 +1,181 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>实现一个类VUE的双向绑定</title>
+</head>
+<body>
+    <script>
+        /**
+         * @description 难点
+         * 1、Dep的作用
+         * 2、Dep和watcher的关系
+         * 3、Dep是如何保存Watcher的
+         * 4、Dep和变量之间的关系
+         * 5、访问子变量的时候，是如何触发父变量收集依赖的
+         */
+
+
+        //  逻辑梳理
+        /**
+         * 1、首先实例化Vue类，在实例化时，先触发observe，递归的对data中所有变量进行订阅
+         * 2、每次订阅前，都会生成一个dep实例，data本身也有一个dep实例
+         * 3、dep是闭包产生的，因此，所有与dep相关的操作，都要放到defineReactive函数内部执行
+         */
+
+        // dep类
+        /**
+         * 1、先定义一个全局的uid，便于分别每一个dep实例，在创建dep的时候绑定并自加1，
+         * 每一个dep，都会有一个subs队列，里面存放的是watcher。
+         * 2、改变一个变量时，只需要拿到这个变量对应的dep即可，因为dep有一个subs队列，
+         * 存放的全是相关的发布者watcher，只需要遍历subs并且调用其中发布者的update方法即可更新页面，
+         * 这就是设计dep类的思想。
+         */
+
+        class Vue {
+            constructor(options = {}) {
+                this.$options = options
+                this.$el = options.el
+                this.$data = options.data
+                this.$methods = options.methods
+                this.observe(this.$data)
+                new Compiler(this.$el, this)
+            }
+            observe(data) {
+                if(!data || typeof data !== 'object') return
+                Object.keys(data).forEach(key => {
+                    this.defineReactive(data,key, data[key])
+                })
+            }
+            defineReactive(data, key, value) {
+                this.observe(value)
+                let dep = new Dep()
+                this.$dep.push(dep)
+                Object.defineProperty(data, key, {
+                    enumerable: true,
+                    configurable:true,
+                    get() {
+                        // 由于需要在闭包内添加watcher，所以通过Dep定义一个全局target属性，
+                        // 暂存watcher, 添加完移除
+                        if(Dep.target) {
+                            dep.depend()
+                        }
+                        return value
+                    },
+                    set(val) {
+                        return val
+                    }
+                })
+            }
+        }
+
+        let guid = 0
+        class Dep {
+            static target = null
+            static subs = []
+            static uid = number
+            constructor() {
+                this.subs = []
+                this.uid = guid++
+            }
+            addSub(sub) {
+                this.subs.push(sub)
+            }
+            depend() {
+                Dep.target.addDep(this)
+            }
+            notify() {
+                this.subs.forEach(sub => {
+                    sub.update()
+                })
+            }
+        }
+        Dep.target = null
+
+        // 编译模板 Compiler
+        /**
+         * 先从document拿到指定的HTMLelement#app，
+         * 并且推到一个documentFragment里，(不懂的去百度documentFragment)。
+         * 然后编译这个fragment，最后再把fragment推回#app节点
+         * 遍历里面的每一个childNode，然后再递归遍历，获取每一个node的attribute，
+         * 通过字符串格式判断是什么类型的指令。
+         */
+        class Compiler {
+            constructor(el, vm) {
+                this.$el = document.querySelector(el)
+                this.initUpdaters()
+                this.initCompileUtil()
+                if(this.$el) {
+                    this.$vm = vm
+                    this.$fragment = this.node2Fragment(this.$el)
+                    this.compileHTML(this.$fragment)
+                    this.$el.appendChild(this.$fragment)
+                }
+            }
+        }
+        /* 重点看bindWatcherAndDep函数。
+        顾名思义，它的功能就是绑定watcher和dep两者之间的关系，这是非常重要的一步。 */
+        /**
+        * 把watcher绑定到对应的dep上
+        * @param node 当数据改变时，watcher发布更新，该数据对应所要更新的HTML节点
+        * @param exp 更新的数据的表达式，例如number.big
+        * @param dir substring后指令名，例如model，text
+        */
+        function bindWatcherAndDep(node, exp, dir) {
+            let updateFn = this.Updaters[dir + "Updater"]
+            // 初始化model层 -> View层的数据
+            updateFn && updateFn(node, this.getDeepValue(exp));
+
+            new Watcher(this.$vm, exp, (value) => {
+                updateFn && updateFn(node, value)
+            })
+        }
+
+        // 其实并没有什么函数把watcher和dep绑定起来，这一步其实是watcher自己完成的。
+        class Watcher {
+            constructor(vm, exp, cb) {
+                this.vm = vm;
+                this.exp = exp;
+                this.cb = cb;
+                // 创建时必须触发一次依赖收集
+                this.triggerDepCollection();
+            }
+            update() {
+                this.triggerDepCollection();
+                this.cb(this.value);
+            }
+            addDep(dep) {
+                if(!this.depIds.hasOwnProperty(dep.uid)) {
+                    dep.addSub(this);
+                    this.depIds[dep.id] = dep;
+                }
+            }
+            // 收集依赖，因为触发了definProperty的get()
+            triggerDepCollection () {
+                Dep.target = this;
+                this.value = this.getDeepValue();
+                Dep.target = null;
+            }
+            getDeepValue () {
+                let data = this.vm.$data;
+                this.exp.split(".").forEach(key => {
+                    data = data[key];
+                })
+                return data;
+            }
+            
+        }
+
+        let myApp = new Vue({
+            el: '',
+            data: {
+                number: {
+                    big: 999
+                }
+            }
+        })
+    </script>
+</body>
+</html>

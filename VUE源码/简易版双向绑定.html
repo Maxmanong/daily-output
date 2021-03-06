@@ -1,0 +1,118 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>简易版双向绑定</title>
+</head>
+<body>
+    <div>
+        <div id="content"></div>
+        <button id="btn">点击改变</button>
+    </div>
+    <script>
+        // 主要的三个类
+        /**
+         * 1、Dep（收集依赖）
+         * 2、Observer（观察数据）
+         * 3、Watcher（订阅者，若数据有变化通知订阅者）
+         */
+        
+        // 改造数据 相当于Vue里面的 Observer 类
+        function defineReactive(obj, key, val) {
+            const dep = new Dep();
+            Object.defineProperty(obj, key, {
+                enumerable: true,
+                configurable: true,
+                get: function() {
+                    if(Dep.target){
+                        //收集依赖 等同于 dep.addSub(Dep.target)
+                        dep.depend()
+                    }
+                    return val
+                },
+                set: function(newVal) {
+                    //判断新值与旧值是否相等
+                    //判断的后半段是为了验证新值与旧值都为NaN的情况 NaN不等于自身
+                    if(newVal === val || (newVal !== val && val !== val)) {
+                        return
+                    }
+                    //发布改变
+                    val = newVal
+                    dep.notify();
+                    // return 
+                } 
+            })
+        }
+        // 依赖收集
+        // depend() --- 可以理解为收集依赖的事件，不考虑其他方面的话 功能等同于addSub()
+        // notify() --- 这个方法更为直观了，执行所有依赖的update()方法。就是之后的改变视图啊 等等
+        // Dep.target是什么？为什么要有Dep.target才会收集依赖呢？
+        /**
+         * 1、Dep是一个类，Dep.target是类的属性，并不是dep实例的属性。
+         * 2、Dep类在全局可用，所以Dep.target在全局能访问到，可以任意改变它的值。
+         * 3、get这个方法使用很平常，不可能每次使用获取数据值的时候都去调用dep.depend()。
+         * 4、dep.depend()实际上就是dep.addSub(Dep.target)。
+         * 5、那么最好方法就是，在使用之前把Dep.target设置成某个对象，在订阅完成之后设置Dep.target = null。
+         */
+        class Dep {
+            constructor() {
+                // 订阅的信息
+                this.subs = [];
+            }
+            addSub(sub) {
+                this.subs.push(sub);
+            }
+            // removeSub(sub) {
+            //     remove(this.subs, sub)
+            // }
+            depend() {
+                //此方法的作用等同于 this.subs.push(Watcher);
+                if(Dep.target) {
+                    Dep.target.addDep(this)
+                }
+            }
+             //这个方法就是发布通知了 告诉你 有改变啦
+            notify(){
+                const subs = this.subs.slice()
+                for (let i = 0, l = subs.length; i < l; i++) {
+                    console.log('subs[i]: ', subs[i])
+                    subs[i].update(); 
+                } 
+            }
+             
+        }
+        
+        // 验证
+        let obj = {}
+        // 低配 Watcher
+        const watcher = {
+            addDep:function(dep) {
+                dep.addSub(this);
+            },
+            update: function() {
+                html();
+            }
+        }
+        // 相当于 Vue里面的 Compiler 类
+        function html() {
+            console.log('obj.html: ', obj.html)
+            document.getElementById('content').innerHTML = obj.html
+        }
+        defineReactive(obj, 'html', 'how are you！')
+        Dep.target = watcher
+        html()
+        Dep.target = null
+        
+        
+    </script>
+    <script>
+        document.getElementById('btn').onclick = function () {
+            obj.html = 'Hello ， World!'
+        }
+    </script>
+    
+    
+</body>
+</html>
