@@ -1,0 +1,239 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>VUE源码之904-1568行-父子组件配置项的合并策略mergeOptions</title>
+</head>
+<body>
+    <script type="text/javascript">
+        /**
+         * @description 父子组件配置项的合并策略
+         * 1、默认的合并策略
+         * 2、钩子函数的合并策略
+         * 3、filters/props、data合并策略
+         * 4、且包括标准的组件名、props写法有一个统一化规范要求
+         */
+        // 下面主要研究mergeOptions（合并options对象，并生成一个新的对象）
+        // 是实例化和继承中核心方法
+        function mergeOptions(
+            // 该实例构造函数上的options,
+            parent,
+            // 实例化时传入的options
+            child,
+            // vm实例本身
+            vm
+            // 原来mergeoptions方法是要合并 构造函数 和 传入的options 这两个对象。
+        ) {
+            if (process.env.NODE_ENV !== 'production') {
+                // 如果不是生产环境，检查组件名称是否合法
+                // 会检查child的options(实例化传入的options)有components属性
+                /* 
+                 * 包含数字，字母，下划线，连接符，并且以字母开头
+                 * 是否和html标签名称或svg标签名称相同
+                 * 是否和关键字名称相同，如undefined, infinity等 
+                 * */
+                checkComponents(child)
+            }
+            // 如果child是function类型的话，我们取其options属性作为child。
+            if (typeof child === 'function') {
+                child = child.options
+            }
+            // 这三个方法的功能类似
+            // 分别把options中的props,inject,directives属性转换成对象的形式。
+            // 因为有些传入的时候可能会是数组的形式。
+            // 例如 props 是一个数组的情况：
+            /**
+             * 遍历props数组，把数组的每一项的值作为res对象的key，
+             * value值等于{type: null},
+             * 例如 props: ['postTitle'] 转化为 { postTitle: { type: null } }
+             */
+            // 如果传入的props不是纯对象也不是数组，且当前环境也不是生产环境，则抛出警告。
+            // 最后，把处理过的props重新赋值给options.props。
+            // normalizeInject与 props 处理逻辑类似
+            normalizeProps(child, vm)
+            normalizeInject(child, vm)
+            // 这个方法主要是处理一些自定义指令
+            // 例如：
+            /*  
+            Vue.directive('color', function (el, binding) {
+                el.style.backgroundColor = binding.value
+            }) 
+            会转化为：
+            color: {
+                bind: function (el, binding) {
+                    el.style.backgroundColor = binding.value
+                },
+                update: function (el, binding) {
+                    el.style.backgroundColor = binding.value
+                }
+            }    
+            */
+            normalizeDirectives(child)
+
+            /**
+             * 当传入的options里有mixin或者extends属性时，
+             * 再次调用mergeOptions方法合并 mixins 和 extends 里的内容到
+             * 实例的构造函数options上（即parent options）
+             */
+            const extendsFrom = child.extends
+            if (child.mixins) {
+                for (let i = 0, l = child.mixins.length; i < l; i++) {
+                    parent = mergeOptions(parent, child.mixins[i], vm) 
+                } 
+            }
+
+            // 变量options存储合并之后的options
+            const options={}
+            // 变量key存储parent options和child options上的key值
+            let key
+
+            // 接下来的部分算是mergeOptions方法的核心处理部分了，
+            // 像炒菜一样，前面的代码相当于把所有的菜都配好了。
+            // 接下来的部分就是教你怎么去炒菜了。
+            // 遍历options上的key值，然后调用mergeField方法来处理options。
+            for (key in parent) { 
+                mergeField(key) 
+            }
+            for (key in child) { 
+                if (!hasOwn(parent, key)) {
+                     mergeField(key) 
+                } 
+            }
+            // mergeField方法中出现了一个变量strats和defaultStrat。
+            // 这两个变量存储的就是我们的合并策略，也就是炒菜的菜谱，
+            function mergeField (key) {
+                // defaultStrat的逻辑是，
+                // 如果child上该属性值存在时，就取child上的该属性值，
+                // 如果不存在，则取parent上的该属性值。
+                const defaultStrat = function(parentVal, childVal) {
+                    return childVal === undefined ? parentVal : childVal
+                }
+
+                // 下面会列举 starts 的四类策略
+                const strat = strats[key] || defaultStrat 
+                options[key] = strat(parent[key], child[key], vm, key)
+            }
+            // 在经过这几种合并策略合并options后，最终返回options
+            return options
+        }
+
+
+        
+        // strats 的四类合并策略
+        // 一、钩子函数的策略
+        function mergeHook( parentVal, childVal ) {
+            return 
+            childVal
+            ? parentVal
+                // (2) child和parent都存在该属性，则返回concat之后的属性
+                ? parentVal.concat(childVal)
+                // （3）child上存在该属性，parent不存在，且child上的该属性是Array，则直接返回child上的该属性
+                : Array.isArray(childVal)
+                    ? childVal
+                    // (4) child上存在该属性，parent不存在，且child上的该属性不是Array，
+                    // 则把该属性先转换成Array,再返回。
+                    : [childVal]
+            // (1) child options上不存在该属性，parent options上存在,则返回parent上的属性。
+            : parentVal
+        }
+        // 二、props/methods/inject/computed的策略
+        // 这个合并方法逻辑很简单，如果child options上这些属性存在，则先判断它们是不是对象。
+        /**
+         * 1、如果parent options上没有该属性，则直接返回child options上的该属性
+         * 2、如果parent options和child options都有，则合并parent options和child options并生成一个新的对象。
+         * 3、如果parent和child上有同名属性，合并后的以child options上的为准（基本上不存在）
+         */
+        strats.props =
+        strats.methods =
+        strats.inject =
+        strats.computed = function (parentVal, childVal, vm, key) {
+            if (childVal && process.env.NODE_ENV !== 'production') {
+                assertObjectType(key, childVal, vm)
+            }
+            if (!parentVal) return childVal
+            const ret = Object.create(null)
+            extend(ret, parentVal)
+            if (childVal) extend(ret, childVal)
+            return ret
+        }
+        // 三、components/directives/filters的合并策略
+        // 跟 二 的处理逻辑基本一样
+        function mergeAssets(parentVal, childVal, vm, key) {
+            const res = Object.create(parentVal || null)
+            if (childVal) {
+                process.env.NODE_ENV !== 'production' && assertObjectType(key, childVal, vm)
+                return extend(res, childVal)
+            } else {
+                return res
+            }
+        }
+
+        // 四、data和provide的策略
+        export function mergeDataOrFn(parentVal, childVal, vm) {
+            // 这个合并策略可以分成两种情况来考虑。
+            
+            if (!vm) {
+            // 第一种：当前调用mergeOptions操作的不是vm实例（即通过Vue.extend/Vue.component调用了mergeOptions方法）
+            // 如果当前实例options或者构造函数options上有一个没有data属性，则返回另一个的data属性，
+            // 如果两者都有，则同样调用mergeData方法处理合并。
+                if (!childVal) {
+                    return parentVal
+                }
+                if (!parentVal) {
+                    return childVal
+                }
+            return function mergedDataFn () {
+                return mergeData(
+                    typeof childVal === 'function' ? childVal.call(this, this) : childVal,
+                    typeof parentVal === 'function' ? parentVal.call(this, this) : parentVal
+                    )
+                }
+            } else {
+            // 当前调用mergeOptions操作的是vm实例（调用new新建vue实例触发mergeOptions方法）
+            // 如果新建实例时传入的options上有data属性，
+            // 则调用mergeData方法合并实例上的data属性和其构造函数options上的data属性（如果有的话）
+                return function mergedInstanceDataFn () {
+                    // instance merge
+                    const instanceData = typeof childVal === 'function'
+                    ? childVal.call(vm, vm)
+                    : childVal
+                    const defaultData = typeof parentVal === 'function'
+                    ? parentVal.call(vm, vm)
+                    : parentVal
+                    if (instanceData) {
+                        return mergeData(instanceData, defaultData)
+                    } else {
+                        return defaultData
+                    }
+                }
+            }
+        }
+
+        // mergeData 源码
+        // mergeData的逻辑是，
+        /**
+         * 如果from对象中有to对象里没有的属性，则调用set方法，（这里的set就是Vue.$set，先可以简单理解为对象设置属性。）
+         * 如果from和to中有相同的key值，且key对应的value是对象，则会递归调用mergeData方法，否则以to的值为准，最后返回to对象
+         * 
+         */
+        function mergeData(to, from) {
+            if (!from) return to
+            let key, toVal, fromVal
+            const keys = Object.keys(from)
+            for (let i = 0; i < keys.length; i++) { 
+                key=keys[i]
+                toVal=to[key]
+                fromVal=from[key]
+                if (!hasOwn(to, key)) {
+                    set(to, key, fromVal) 
+                } else if (isPlainObject(toVal) && isPlainObject(fromVal)) {
+                    mergeData(toVal, fromVal)
+                } 
+            }
+            return to 
+        }
+    </script>
+</body>
+</html>
