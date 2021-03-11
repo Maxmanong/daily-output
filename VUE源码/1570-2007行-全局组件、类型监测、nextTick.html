@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>VUE源码之1570-2007行-全局组件、类型监测、nextTick</title>
+</head>
+<body>
+    <script>
+        /**
+         *  @description
+         * 第 1570 行至第 1754 行
+         * */
+        // validateProp// prop的格式校验
+        // prop为Boolean类型时做特殊处理
+        // prop的值为空时，获取默认值，并创建观察者对象
+        // prop验证
+        // getPropDefaultValue// 获取默认 prop 值
+        /**
+         * @description 
+         * 第 1756 行至第 1823 行
+         */
+        // 辅助函数：检测内置类型
+        // getType
+        // isSameType
+        // getTypeIndex
+        // getInvalidTypeMessage
+        // styleValue
+        // isExplicable
+        // isBoolean
+        /**
+         * @description 
+         * 第 1827 行至第 1901 行
+         */
+        // 辅助函数：处理错误、错误打印
+
+        // handleError
+        // invokeWithErrorHandling
+        // globalHandleError
+        // logError
+
+        /**
+         * @description 
+         * 第 1905 行至第 2007 行
+         */
+        // flushCallbacks flushCallbacks 挨个同步执行callbacks中回调
+        // MutationObserver
+        // nextTick
+        // 把传入的 cb 回调函数用 try-catch 包裹后放在一个匿名函数中推入callbacks数组中，
+        // 这么做是因为防止单个 cb 如果执行错误不至于让整个JS线程挂掉，每个 cb
+        // 都包裹是防止这些回调函数如果执行错误不会相互影响，比如前一个抛错了后一个仍然可以执行。
+
+        /**
+         * @description
+         * 源码中的注释
+         */
+        // 在vue2.5之前的版本中，nextTick基本上基于 micro task 来实现的，但是在某些情况下 micro task
+        // 具有太高的优先级，并且可能在连续顺序事件之间（例如＃4521，＃6690）或者甚至在同一事件的事件冒泡过程中之间触发（＃6566）。
+        // 但是如果全部都改成 macro task，对一些有重绘和动画的场景也会有性能影响，如
+        // issue #6813。vue2.5之后版本提供的解决办法是默认使用 micro task，
+        // 但在需要时（例如在v-on附加的事件处理程序中）强制使用 macro task。
+        
+    </script>
+</body>
+</html>
