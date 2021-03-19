@@ -1,0 +1,23 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Vue源码之proxy和事件机制</title>
+</head>
+<body>
+    <script>
+        // Vue在挂载实例前，有相当多的工作是进行模板的编译，
+        // 将template模板进行编译，解析成AST树，再转换成render函数，
+        // 而有了render函数后才会进入实例挂载过程。对于事件而言，我们经常使用v-on或者@在模板上绑定事件。
+        // 因此对事件的第一步处理，就是在编译阶段对事件指令做收集处理。
+        // 模板编译的入口是在var ast = parse(template.trim(), options);中，
+        // parse通过拆分模板字符串，将其解析为一个AST树，其中对于属性的处理，在processAttr中
+        // processAttrs的逻辑虽然较多，但是理解起来较为简单，var dirRE = /^v-|^@|^:/;是匹配事件相关的正则，
+        // 命中匹配的记过会得到事件指令相关内容，包括事件本身，事件回调以及事件修饰符。
+        // 最终通过addHandler方法，为AST树添加事件相关的属性。
+        // 而addHandler还有一个重要功能是对事件修饰符进行特殊处理。
+    </script>
+</body>
+</html>
