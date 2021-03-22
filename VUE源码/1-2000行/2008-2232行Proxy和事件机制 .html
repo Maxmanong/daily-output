@@ -18,6 +18,24 @@
         // 命中匹配的记过会得到事件指令相关内容，包括事件本身，事件回调以及事件修饰符。
         // 最终通过addHandler方法，为AST树添加事件相关的属性。
         // 而addHandler还有一个重要功能是对事件修饰符进行特殊处理。
+        
+
+        /**
+         * @description 事件机制
+         * 1、traverse// 遍历：_traverse 深度遍历，用于
+         * traverse 对一个对象做深层递归遍历，因为遍历过程中就是对一个子对象的访问，
+         * 会触发它们的 getter 过程，这样就可以收集到依赖，也就是订阅它们变化的 watcher，
+         * 且遍历过程中会把子响应式对象通过它们的 depid 记录到 seenObjects，避免以后重复访问。
+         * 
+         * 2、normalizeEvent// normalizeEvents是针对v-model的处理,
+         * 例如在IE下不支持change事件，只能用input事件代替。
+         * 
+         * 
+         * 3、createFnInvoker// 在初始构建实例时，旧节点是不存在的,
+         * 此时会调用createFnInvoker函数对事件回调函数做一层封装，
+         * 由于单个事件的回调可以有多个，因此createFnInvoker的作用是对单个，
+         * 多个回调事件统一封装处理，返回一个当事件触发时真正执行的匿名函数。
+         */
     </script>
 </body>
 </html>

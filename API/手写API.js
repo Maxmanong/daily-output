@@ -37,7 +37,7 @@ function _new(fn) {
  * @description 
  * 1、call的参数除了第一个是this外，其他的可以是无限个
  * 2、apply是call的语法糖，第二个参数是一个数组，里面是所有的参数集合
- * 3、bind不会改变原对象，call和apply会改变
+ * 3、bind不会改变被绑定对象，call和apply会改变
  * 4、bind绑定后不会执行，call和apply会执行
  */
 
