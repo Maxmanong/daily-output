@@ -106,5 +106,5 @@ function addOil() {
     console.log("哦哟！")
 }
 
- let car = compose(drive, music, addOil);
- let newEnergyCar = compose(drive, music);
+//  let car = compose(drive, music, addOil);
+//  let newEnergyCar = compose(drive, music);
