@@ -1,0 +1,103 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>路由原理</title>
+</head>
+
+<body>
+    <button type="button" onclick="history.go(-1)">返回</button><br />
+    push模式
+    <ul>
+        <li onclick="Router.push(baseUrl)">首页</li>
+        <li onclick="Router.push(baseUrl+'news')">新闻</li>
+        <li onclick="Router.push(baseUrl+'product')">产品</li>
+    </ul>
+    replace模式
+    <ul>
+        <li onclick="Router.replace(baseUrl)">首页</li>
+        <li onclick="Router.replace(baseUrl+'news')">新闻</li>
+        <li onclick="Router.replace(baseUrl+'product')">产品</li>
+    </ul>
+    <div id="app"></div>
+    <script>
+        var app = document.getElementById("app"),
+            baseUrl = "/router/";
+
+        function RouterClass(opts) {
+            this.routes = {};
+            this.curUrl = "";
+            this.mode = "";
+            if (opts) {
+                this.mode = opts.mode;
+                if (this.mode === 'history') {
+                    this.eventHistoryRouter();
+                } else {
+                    this.eventHashRouter();
+                }
+            } else {
+                this.eventHashRouter();
+            }
+        }
+        RouterClass.prototype.route = function (path, callback) {
+            this.routes[path] = callback || function () {}
+        };
+        //hash模式
+        RouterClass.prototype.hashRouter = function () {
+            this.curUrl = window.location.hash.slice(1) || '/';
+            this.routes[this.curUrl]();
+        };
+        //监听hash模式路由
+        RouterClass.prototype.eventHashRouter = function () {
+            window.addEventListener("load", this.hashRouter.bind(this));
+            window.addEventListener("hashchange", this.hashRouter.bind(this));
+        };
+        //history模式
+        RouterClass.prototype.historyRouter = function () {
+            this.curUrl = window.location.pathname;
+            this.routes[this.curUrl]();
+        };
+        //监听history模式路由
+        RouterClass.prototype.eventHistoryRouter = function () {
+            window.addEventListener("load", this.historyRouter.bind(this));
+            window.addEventListener("popstate", this.historyRouter.bind(this));
+        };
+
+        //push模式跳转页面
+        RouterClass.prototype.push = function (url) {
+            if (this.mode === 'history') {
+                window.history.pushState({}, null, url);
+                this.routes[url]();
+            } else {
+                url = "#" + url;
+                window.location.href = url;
+            }
+        };
+        //replace模式跳转页面
+        RouterClass.prototype.replace = function (url) {
+            if (this.mode === 'history') {
+                window.history.replaceState({}, null, url);
+                this.routes[url]();
+            } else {
+                url = "#" + url;
+                window.location.replace(url);
+            }
+        };
+
+
+        var Router = new RouterClass({
+            mode: "history" //hash:带#号,history:不带#号
+        });
+        Router.route(baseUrl, function () {
+            app.innerHTML = "首页"
+        })
+        Router.route(baseUrl + 'news', function () {
+            app.innerHTML = "新闻页面"
+        })
+        Router.route(baseUrl + 'product', function () {
+            app.innerHTML = "产品页面"
+        })
+    </script>
+</body>
+
+</html>
