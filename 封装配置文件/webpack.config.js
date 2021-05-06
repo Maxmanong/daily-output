@@ -8,6 +8,9 @@ let OptimizeCss = require("optimize-css-assets-webpack-plugin")
 // js压缩
 let UglifyjsPlugin = require("uglifyjs-webpack-plugin")
 
+// HappyPack 只是作用与 loader 上，使用多个进程同时对文件进行编译
+let HappyPack = require('happypack')
+
 // css兼容
 let postCss = require('autoprefixer')({
     "overrideBrowserslist": [
@@ -92,6 +95,17 @@ module.exports = {
         // 抽离css插件
         new MiniCssExtractPlugin({
             filename: "static/css/main.css"
+        }),
+
+        // 创建 HappyPack 插件
+        new HappyPack({
+            /**
+             * @必须配置
+             * id：标识符，必须要和rules中指定的 id 对应起来
+             **/
+            id: 'babel',
+            // 需要使用的 loader，用法和 rules 中 Loader 配置一样
+            loaders: ['babel-loader?cacheDirectory']
         })
     ],
     module: {
@@ -101,7 +115,7 @@ module.exports = {
                 use: [
                     MiniCssExtractPlugin.loader,
                     {
-                        loader: "css-loader"
+                        loader: "css-loader",
                     },
                     // css兼容性
                     {
@@ -131,7 +145,9 @@ module.exports = {
             {
                 test: /\.(js|jsx)$/,
                 use: {
-                    loader: "babel-loader",
+                    // loader: "babel-loader",
+                    // 现在用下面的方式替换成 happypack/loader，并使用 id 指定创建的 HappyPack 插件
+                    loader: "happypack/loader?id=babel",
                     
                     options: {
                         // 用babel-loader 需要把es6转为es5

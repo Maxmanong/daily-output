@@ -154,7 +154,7 @@ import Vnode from "./Vnode.js"
 
 
 
-        // 创建真是dom的方法
+        // 创建真实dom的方法
         createElement(vnode, options) {
             let el = options.el
             if (!el || !document.querySelector(el)) return console.error('无法找到根节点！')
