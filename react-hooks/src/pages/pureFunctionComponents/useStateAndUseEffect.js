@@ -1,21 +1,20 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect } from 'react';
 
 /* eslint-disable */
 function PureFunction () {
-    const [num, setNum] = useState(0)
-    const [initState, setInitState] = useState({ data: 0 })
-    let timer = null
+    const [num, setNum] = useState(0);
+    const [initState, setInitState] = useState({ data: 0 });
+    let timer = null;
     function changeData() {
-
         // initState
-        setInitState({ data: 5, data1: 7 })
+        setInitState({ data: 5, data1: 7 });
         // 因为hooks的执行式异步的，所以这里第一次点击的时候会是初始值
         console.log('initState:', initState);
+        // 因为定时器是下一个宏任务执行的，在这之前已经清除了
         timer = setTimeout(() => {
             // 这里也是保留了 initState 的初始值 形成了闭包
             console.log('setTimeout之后的initState', initState);
         }, 0);
-
 
         // num
         /**
@@ -31,8 +30,8 @@ function PureFunction () {
          * 1、接管的函数 n => n + 1 并未放弃对n的援用，而是表白了一种 加1 操作
          * 2、举荐应用函数代码进行 setState
          */
-        setNum(n => n + 1)
-        setNum(n => n + 1)
+        setNum(n => n + 1);
+        setNum(n => n + 1);
     }
     // 副作用函数
     /**
@@ -44,17 +43,20 @@ function PureFunction () {
     useEffect(() => {
         console.log('useEffect里面的initState：', initState);
         console.log('useEffect里面的num：', num);
+    }, [num, initState]);
+
+    useEffect(() => {
         // 这里相当于 class组件 里面的 componentWillUnmount，一般再这里清除定时器
         return () => {
-            console.log('00000000000000000000000');
-            clearTimeout(timer)
+            alert('离开组件');
+            clearTimeout(timer);
         }
-    }, [num, initState])
+    }, []);
 
 
     return (
         <div>
-            <p>{ initState.data }</p>
+            <p>{ initState.data }  ----   { num }</p>
             <button onClick={ changeData }>改变数据</button>
         </div>
     )
